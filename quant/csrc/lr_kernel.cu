@@ -218,8 +218,9 @@ Computes GEMM (PyTorch interface).
 Args:
     _A: tensor of shape [seqlen (512), rank (64)];
     _B: tensor of shape [rank (64), dim (128)];
+    _C: tensor of shape [1, dim (128)];
 Returns:
-    C: tensor of shape [seqlen (512), dim (128)];
+    _D: tensor of shape [1, seqlen (512)];
 */
 torch::Tensor lr_kernel_cuda(
     torch::Tensor _A, 
