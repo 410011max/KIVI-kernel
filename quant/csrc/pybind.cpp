@@ -3,6 +3,7 @@
 #include "gemv_cuda.h"
 #include "wmma_base_ours.h"
 #include "gemv_ours.h"
+#include "lr_kernel.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
@@ -10,4 +11,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
   m.def("gemv_forward_cuda_outer_dim", &gemv_forward_cuda_outer_dim);
   m.def("wmma_base_ours_cuda", &wmma_base_ours_cuda);
   m.def("gemv_4low_rank", &gemv_4low_rank);
+  m.def("lr_kernel_cuda", &lr_kernel_cuda);
 }

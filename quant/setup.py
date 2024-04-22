@@ -39,6 +39,7 @@ setup(
                 "csrc/gemv_cuda.cu",
                 "csrc/wmma_base_ours.cu",
                 "csrc/gemv_ours.cu",
+                "csrc/lr_kernel.cu",
             ],
             include_dirs=["csrc/common"],
             extra_compile_args=extra_compile_args,

@@ -73,19 +73,20 @@ def test_gemv_speed():
 
 
 def test_lr_kernel_correct():
-	M, N, K = 128, 128, 64
-	A = torch.randn((M, K), device='cuda', dtype=torch.float16)
-	B = torch.randn((N, K), device='cuda', dtype=torch.float16)
-	Q = torch.randn((1, N), device='cuda', dtype=torch.float16)
+    M, N, K = 128, 128, 64
+    A = torch.randn((M, K), device='cuda', dtype=torch.float16)
+    B = torch.randn((N, K), device='cuda', dtype=torch.float16)
+    Q = torch.randn((1, N), device='cuda', dtype=torch.float16)
 
-	output_ref = Q @ (A @ B.T).T
-	C = kivi_gemv.wmma_base_ours_cuda(A, B)
-	output = kivi_gemv.gemv_4low_rank(Q, C)
-	# output = kivi_gemv.lr_kernel_ours_cuda(A, B, Q)
- 
-	error = output_ref - output
-	rel_out_error = torch.abs(error / (output_ref + 1e-5)).mean()
-	print(f'LR kernel ({M}, {N}, {K}) average error: {rel_out_error:.5f}\n')
+    output_ref = Q @ (A @ B.T).T
+    output = kivi_gemv.lr_kernel_cuda(A, B, Q)
+
+    print(output_ref.shape)
+    print(output.shape)
+
+    error = output_ref - output
+    rel_out_error = torch.abs(error / (output_ref + 1e-5)).mean()
+    print(f'LR kernel ({M}, {N}, {K}) average error: {rel_out_error:.5f}\n')
 
 
 def test_lr_kernel_speed():
@@ -100,7 +101,7 @@ def test_lr_kernel_speed():
                                         setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
 
     # CUDA
-    stmt = "kivi_gemv.lr_kernel_ours_cuda(A, B, Q)"
+    stmt = "kivi_gemv.lr_kernel_cuda(A, B, Q)"
     t_our = py_benchmark(stmt, {**globals(), **locals()}, min_repeat_second=1,
                         setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
 
