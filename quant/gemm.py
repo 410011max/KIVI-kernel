@@ -13,6 +13,22 @@ import kivi_gemv
 
 
 
+def test_gemv_correct():
+	M, N, K = 512, 128, 64
+	A = torch.randn((M, K), device='cuda', dtype=torch.float16)
+	B = torch.randn((N, K), device='cuda', dtype=torch.float16)	
+
+	output_ref = A @ B.T
+	output = kivi_gemv.wmma_base_ours_cuda(A, B, M, N, K)
+
+	print(output.shape)
+	print(output_ref.shape)
+	
+	error = output_ref - output
+	rel_out_error = torch.abs(error.float() / (output_ref + 1e-5).float()).mean()
+	print(f'avg out error: {rel_out_error}')
+
+
 def test_gemm_speed():
 	M, N, K = 512, 128, 64
 	A = torch.randn((M, K), device='cuda', dtype=torch.float16)
@@ -37,3 +53,4 @@ if __name__ == "__main__":
 	random.seed(0)
  
 	test_gemm_speed()
+	test_gemv_correct()
