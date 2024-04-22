@@ -12,6 +12,7 @@
 
 #include <cuda_fp16.h>
 #include <stdio.h>
+#include <iostream>
 #include <torch/extension.h>
 #include "gemv_cuda.h"
 #define VECTORIZE_FACTOR 8
@@ -286,6 +287,9 @@ __global__ void bgemv4_kernel_outer_dim(
     const int ICR = IC;
     // 1float4 == 8 half number
     float psum[pack_factor]{};
+    if(blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x == 0 && threadIdx.y == 0){
+
+    }
     for (int k=0; k < (IC + TILE_DIM - 1) / TILE_DIM; k++){
       uint32_t qw[4]{};
       half cscale[4]{};
@@ -330,7 +334,7 @@ __global__ void bgemv4_kernel_outer_dim(
           if (oc_idx < OC){
             float cur_single_weight_fp = (float)(cur_packed_weight & num);
             float dequantized_weight = cur_scale * cur_single_weight_fp + cur_zero;
-            // if(blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x == 0 && threadIdx.y == 0 && k == 1) printf("%d %d %d %f %f %f %f %f\n", k, ic_0, ic_1, dequantized_weight, cur_single_weight_fp, cur_scale, cur_zero, cur_inp);
+            //if(blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x == 0 && threadIdx.y == 0 && k == 1) printf("%d %d %d %f %f %f %f %f\n", k, ic_0, ic_1, dequantized_weight, cur_single_weight_fp, cur_scale, cur_zero, cur_inp);
             cur_packed_weight = cur_packed_weight >> bit;
             psum[ic_1] += dequantized_weight * cur_inp;
           }
@@ -392,18 +396,6 @@ __global__ void bgemv2_kernel_outer_dim(
         if (inputs_ptr_delta + i < ICR)
           inp[i] = *(inputs + inputs_ptr_delta + i);
       }
-      // if (weight_offset < OC * ICR / pack_factor)
-      //   *((float4*)(qw)) = *((float4*)(weight + packed_oc_idx * ICR + k * TILE_DIM + threadIdx.x*4));
-      // int scale_mn_offset = group_idx * ICR + k * TILE_DIM + threadIdx.x*4;
-      // if (scale_mn_offset < OC * ICR / group_size){
-      //   *((float2*)(cscale)) = *((float2*)(scaling_factors + scale_mn_offset));
-      //   *((float2*)(czero)) = *((float2*)(zeros + scale_mn_offset));
-      // }
-      // int inputs_ptr_delta = k * TILE_DIM + threadIdx.x * 4; 
-      // if (inputs_ptr_delta < ICR){
-      //   const half* inputs_ptr = inputs + inputs_ptr_delta;
-      //   *((float2*)(inp)) = *((float2*)(inputs_ptr));
-      // }
       // multiply 32 weights with 32 inputs
       #pragma unroll
       for (int ic_0 = 0; ic_0 < 4; ic_0++){
@@ -433,75 +425,6 @@ __global__ void bgemv2_kernel_outer_dim(
     }
 }
 
-// __global__ void bgemv2_kernel_g64_outer_dim(
-//   const half* _inputs, const uint32_t* _weight, const half* _zeros, const half* _scale, half* _outputs, 
-//   const int IC, const int OC){
-//     const int group_size = 64;
-//     const int bit = 2;
-//     const int pack_factor = 16;
-//     const int batch_idx = blockIdx.x;
-//     const int packed_oc_idx = blockIdx.y * blockDim.y + threadIdx.y; 
-//     const int oc_start_idx = packed_oc_idx * pack_factor;
-//     const int group_idx = oc_start_idx / group_size; 
-//     const int ICR = IC;
-//     const half* inputs = _inputs + batch_idx * ICR;
-//     half* outputs = _outputs + batch_idx * OC;
-//     const uint32_t*  weight = _weight + batch_idx * OC * IC / pack_factor;
-//     const half* scaling_factors = _scale + batch_idx * OC * IC / group_size;
-//     const half* zeros = _zeros + batch_idx * OC * IC / group_size;
-//     const int TILE_DIM = 128;
-//     const int num = 0xFF >> (8-bit);
-//     // 1float4 == 8 half number
-//     float psum[pack_factor]{};
-//     for (int k=0; k < (ICR + TILE_DIM - 1) / TILE_DIM; k++){
-//       uint32_t qw[4]{};
-//       half cscale[4]{};
-//       half czero[4]{};
-//       half inp[4]{};
-//       // each thread load 32 int4 number
-//       int weight_offset = packed_oc_idx * ICR + k * TILE_DIM + threadIdx.x*4;
-//       if (weight_offset < OC * ICR / pack_factor)
-//         *((float4*)(qw)) = *((float4*)(weight + packed_oc_idx * ICR + k * TILE_DIM + threadIdx.x*4));
-//       int scale_mn_offset = group_idx * ICR + k * TILE_DIM + threadIdx.x*4;
-//       if (scale_mn_offset < OC * ICR / group_size){
-//         *((float2*)(cscale)) = *((float2*)(scaling_factors + scale_mn_offset));
-//         *((float2*)(czero)) = *((float2*)(zeros + scale_mn_offset));
-//       }
-//       int inputs_ptr_delta = k * TILE_DIM + threadIdx.x * 4; 
-//       if (inputs_ptr_delta < ICR){
-//         const half* inputs_ptr = inputs + inputs_ptr_delta;
-//         *((float2*)(inp)) = *((float2*)(inputs_ptr));
-//       }
-//       // multiply 32 weights with 32 inputs
-//       #pragma unroll
-//       for (int ic_0 = 0; ic_0 < 4; ic_0++){
-//         uint32_t cur_packed_weight =  qw[ic_0];
-//         float cur_inp = __half2float(inp[ic_0]);
-//         float cur_scale = __half2float(cscale[ic_0]);
-//         float cur_zero = __half2float(czero[ic_0]);
-//         for (int ic_1 = 0; ic_1 < pack_factor; ic_1++){
-//           int oc_idx = oc_start_idx + ic_1;
-//           if (oc_idx < OC){
-//             float cur_single_weight_fp = (float)(cur_packed_weight & num);
-//             float dequantized_weight = cur_scale * cur_single_weight_fp + cur_zero;
-//             // if(blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x == 0 && threadIdx.y == 0 && k == 1) printf("%d %d %d %f %f %f %f %f\n", k, ic_0, ic_1, dequantized_weight, cur_single_weight_fp, cur_scale, cur_zero, cur_inp);
-//             cur_packed_weight = cur_packed_weight >> bit;
-//             psum[ic_1] += dequantized_weight * cur_inp;
-//           }
-//         }
-//       }
-//     }
-//     for (int i=0; i < pack_factor; i++){
-//       int oc_idx = oc_start_idx + i;
-//       if (oc_idx < OC){
-//         psum[i] = warp_reduce_sum(psum[i]);
-//         if (threadIdx.x == 0) 
-//           outputs[oc_idx] = __float2half(psum[i]); 
-//       }
-//     }
-// }
-
-
 /*
 Computes GEMV (PyTorch interface).
 
@@ -517,7 +440,7 @@ Returns:
 */
 torch::Tensor gemv_forward_cuda_outer_dim(
     torch::Tensor _in_feats,
-    torch::Tensor _kernel,
+    torch::Tensor _kernel, //(B*32, 128, L)
     torch::Tensor _scaling_factors,
     torch::Tensor _zeros,
     const int bit,
@@ -543,6 +466,11 @@ torch::Tensor gemv_forward_cuda_outer_dim(
     auto out_feats = reinterpret_cast<half*>(_out_feats.data_ptr<at::Half>());
     int pack_factor = 32 / bit;
     dim3 num_blocks(BS, (num_out_channels / pack_factor + 3) / 4, num_out_feats);
+    //std::cout << (num_out_channels / pack_factor + 3) / 4 << " " << num_out_feats << std::endl;
+
+    std::cout << "IC: " << num_in_channels << " OC: " << num_out_channels << " group_size: " << group_size << " nh: " << nh << " mqa: " << mqa << std::endl;
+    std::cout << num_blocks.x << " " << num_blocks.y << " " << num_blocks.z << std::endl;
+    //printf("hello!!!");
     dim3 num_threads(32, 4);
     if (bit == 4){
       bgemv4_kernel_outer_dim<<<num_blocks, num_threads>>>(

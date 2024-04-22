@@ -210,8 +210,8 @@ torch::Tensor gemv_forward_cuda(
     const int bit,
     const int group_size)
 {
-    int num_in_feats = _in_feats.size(0);
-    int num_in_channels = _in_feats.size(1);
+    int num_in_feats = _in_feats.size(0); // bs*head
+    int num_in_channels = _in_feats.size(1); // head_dims
     // int kernel_volume = _out_in_map.size(1);
     auto in_feats = reinterpret_cast<float4*>(_in_feats.data_ptr<at::Half>());
     auto kernel = reinterpret_cast<uint32_t*>(_kernel.data_ptr<int>());
