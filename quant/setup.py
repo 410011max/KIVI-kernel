@@ -37,7 +37,8 @@ setup(
             sources=[
                 "csrc/pybind.cpp", 
                 "csrc/gemv_cuda.cu",
-                "csrc/wmma_base_ours.cu"
+                "csrc/wmma_base_ours.cu",
+                "csrc/gemv_ours.cu",
             ],
             include_dirs=["csrc/common"],
             extra_compile_args=extra_compile_args,
