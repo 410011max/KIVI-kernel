@@ -14,35 +14,32 @@ import kivi_gemv
 
 
 def test_gemv_correct():
-	M, N, K = 512, 128, 64
+	M, N, K = 128, 128, 64
 	A = torch.randn((M, K), device='cuda', dtype=torch.float16)
-	B = torch.randn((N, K), device='cuda', dtype=torch.float16)	
+	B = torch.randn((N, K), device='cuda', dtype=torch.float16)
 
 	output_ref = A @ B.T
 	output = kivi_gemv.wmma_base_ours_cuda(A, B, M, N, K)
-
-	print(output.shape)
-	print(output_ref.shape)
 	
 	error = output_ref - output
 	rel_out_error = torch.abs(error.float() / (output_ref + 1e-5).float()).mean()
-	print(f'avg out error: {rel_out_error}')
+	print(f'avg out error: {rel_out_error:.5f}')
 
 
 def test_gemm_speed():
-	M, N, K = 512, 128, 64
+	M, N, K = 128, 128, 64
 	A = torch.randn((M, K), device='cuda', dtype=torch.float16)
-	B = torch.randn((K, N), device='cuda', dtype=torch.float16)	
+	B = torch.randn((N, K), device='cuda', dtype=torch.float16)	
 
 	# Pytorch
-	stmt = "A @ B"
+	stmt = "A @ B.T"
 	t_ref = py_benchmark(stmt, {**globals(), **locals()}, min_repeat_second=1,
                                      setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
 
 	# CUDA
 	stmt = "kivi_gemv.wmma_base_ours_cuda(A, B, M, N, K)"
 	t_our = py_benchmark(stmt, {**globals(), **locals()}, min_repeat_second=1,
-                                     setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
+                      setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
 	print(f'vanilla pytorch gemm: {t_ref * 1000:.3f} ms')
 	print(f'our {M}_{N}_{K} gemm: {t_our * 1000:.3f} ms')
 
@@ -51,6 +48,7 @@ if __name__ == "__main__":
 	torch.manual_seed(0)
 	np.random.seed(0)
 	random.seed(0)
- 
-	test_gemm_speed()
+
 	test_gemv_correct()
+	test_gemm_speed()
+	
