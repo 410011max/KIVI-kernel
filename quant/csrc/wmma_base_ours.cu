@@ -221,27 +221,30 @@ Returns:
   C: tensor of shape [M, N];
 */
 torch::Tensor wmma_base_ours_cuda(
-    torch::Tensor _A,
-    torch::Tensor _B,
-    const int M,
-    const int N,
-    const int K)
+    torch::Tensor _A, 
+    torch::Tensor _B)
 {
+    // Shape
+    int M = _A.size(0);
+    int N = _B.size(0);
+    int K = _B.size(1);
+
     // Input
-    auto A = reinterpret_cast<half*>(_A.data_ptr<at::Half>());
-    auto B = reinterpret_cast<half*>(_B.data_ptr<at::Half>());
+    auto A = reinterpret_cast<half *>(_A.data_ptr<at::Half>());
+    auto B = reinterpret_cast<half *>(_B.data_ptr<at::Half>());
 
     // Output
     auto options = torch::TensorOptions().dtype(_A.dtype()).device(_A.device());
     at::Tensor _C = torch::empty({M, N}, options);
-    auto C = reinterpret_cast<half*>(_C.data_ptr<at::Half>());
+    auto C = reinterpret_cast<half *>(_C.data_ptr<at::Half>());
 
     // Kernel excution
     static size_t smem_max_size = initwmmaBaseOurs();
     dim3 block(THREADS_PER_BLOCK);
-    dim3 grid(BLOCK_STRIDE, div_ceil(M, BLOCK_ROWS), div_ceil(N, BLOCK_COLS * BLOCK_STRIDE));
+    dim3 grid(BLOCK_STRIDE, div_ceil(M, BLOCK_ROWS),
+                div_ceil(N, BLOCK_COLS * BLOCK_STRIDE));
 
     wmmaBaseOursKernel<<<grid, block, smem_max_size>>>(A, B, C, M, N, K);
-    
+
     return _C;
-;}
+}
