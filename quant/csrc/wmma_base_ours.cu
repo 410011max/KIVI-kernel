@@ -67,6 +67,7 @@ __global__ void wmmaBaseOursKernel(const half *__restrict__ A, const half *__res
     const size_t warp_id = threadIdx.x / WARP_SIZE;
     const size_t lane_id = threadIdx.x % WARP_SIZE;
 
+    // ?????
     constexpr size_t B_smem_idx_off = BLOCK_ROWS;
 
     half *smem_warp_tile_ptr = &smem[0][0] + (warp_id / BLOCK_ROW_WARPS) * C_SMEM_STRIDE * WARP_ROWS +
@@ -88,7 +89,7 @@ __global__ void wmmaBaseOursKernel(const half *__restrict__ A, const half *__res
         }
     }
 
-    // 
+    // ?????
     const half *A_warp_ptr = &A[block_tile_i * WMMA_M * K] + BLOCK_ROWS / WARPS_PER_BLOCK * K * warp_id;
     const half *B_warp_ptr = &B[block_tile_j * WMMA_N * K] + BLOCK_COLS / WARPS_PER_BLOCK * K * warp_id;
 
@@ -214,11 +215,10 @@ void wmmaBaseOurs(half *A, half *B, half *C, size_t M, size_t N, size_t K) {
 Computes GEMM (PyTorch interface).
 
 Args:
-  _A: tensor of shape [seqlen (512), rank (64)];
-  _B: int tensor of shape [rank (64), dim (128)];
-  M, N, K: MatMul shape (M, K) x (K, N) = (M, N);
+    _A: tensor of shape [seqlen (512), rank (64)];
+    _B: tensor of shape [rank (64), dim (128)];
 Returns:
-  C: tensor of shape [M, N];
+    C: tensor of shape [seqlen (512), dim (128)];
 */
 torch::Tensor wmma_base_ours_cuda(
     torch::Tensor _A, 
