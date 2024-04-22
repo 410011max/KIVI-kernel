@@ -16,7 +16,7 @@ def test_gemm_correct():
 	
 	error = output_ref - output
 	rel_out_error = torch.abs(error.float() / (output_ref + 1e-5).float()).mean()
-	print(f'GEMM ({M}, {N}, {K}) avg out error: {rel_out_error:.5f}\n')
+	print(f'GEMM ({M}, {N}, {K}) average error: {rel_out_error:.5f}\n')
 
 
 def test_gemm_speed():
@@ -49,7 +49,7 @@ def test_gemv_correct():
 	
 	error = output_ref - output
 	rel_out_error = torch.abs(error.float() / (output_ref + 1e-5).float()).mean()
-	print(f'GEMV ({M}, {N}, {K}) avg out error: {rel_out_error:.5f}\n')
+	print(f'GEMV ({M}, {N}, {K}) average error: {rel_out_error:.5f}\n')
 
 
 def test_gemv_speed():
@@ -68,8 +68,8 @@ def test_gemv_speed():
                       setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
 	
 	print(f'GEMV ({M}, {N}, {K}) Speed Test:')
-	print(f'pytorch gemm: {t_ref * 1000:.3f} ms')
-	print(f'our gemm: {t_our * 1000:.3f} ms\n')
+	print(f'pytorch gemv: {t_ref * 1000:.3f} ms')
+	print(f'our gemv: {t_our * 1000:.3f} ms\n')
 
 
 def test_lr_kernel_correct():
@@ -85,26 +85,28 @@ def test_lr_kernel_correct():
  
 	error = output_ref - output
 	rel_out_error = torch.abs(error / (output_ref + 1e-5)).mean()
-	print(f'avg out error: {rel_out_error:.5f}\n')
+	print(f'LR kernel ({M}, {N}, {K}) average error: {rel_out_error:.5f}\n')
 
 
 def test_lr_kernel_speed():
-	M, N, K = 128, 128, 64
-	A = torch.randn((M, K), device='cuda', dtype=torch.float16)
-	B = torch.randn((N, K), device='cuda', dtype=torch.float16)
-	Q = torch.randn((1, N), device='cuda', dtype=torch.float16)
+    M, N, K = 128, 128, 64
+    A = torch.randn((M, K), device='cuda', dtype=torch.float16)
+    B = torch.randn((N, K), device='cuda', dtype=torch.float16)
+    Q = torch.randn((1, N), device='cuda', dtype=torch.float16)
 
-	# Pytorch
-	stmt = "Q @ (A @ B.T).T"
-	t_ref = py_benchmark(stmt, {**globals(), **locals()}, min_repeat_second=1,
-                                     setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
+    # Pytorch
+    stmt = "Q @ (A @ B.T).T"
+    t_ref = py_benchmark(stmt, {**globals(), **locals()}, min_repeat_second=1,
+                                        setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
 
-	# CUDA
-	stmt = "kivi_gemv.lr_kernel_ours_cuda(A, B, Q)"
-	t_our = py_benchmark(stmt, {**globals(), **locals()}, min_repeat_second=1,
-                      setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
-	print(f'vanilla pytorch gemm: {t_ref * 1000:.3f} ms')
-	print(f'our {M}_{N}_{K} gemm: {t_our * 1000:.3f} ms\n')
+    # CUDA
+    stmt = "kivi_gemv.lr_kernel_ours_cuda(A, B, Q)"
+    t_our = py_benchmark(stmt, {**globals(), **locals()}, min_repeat_second=1,
+                        setup="torch.cuda.synchronize()", finish="torch.cuda.synchronize()")
+
+    print(f'LR kernel ({M}, {N}, {K}) Speed Test:')
+    print(f'pytorch lr: {t_ref * 1000:.3f} ms')
+    print(f'our lr kernel: {t_our * 1000:.3f} ms\n')
 
 
 if __name__ == "__main__":
