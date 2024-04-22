@@ -218,7 +218,7 @@ Args:
     _A: tensor of shape [seqlen (512), rank (64)];
     _B: tensor of shape [rank (64), dim (128)];
 Returns:
-    C: tensor of shape [seqlen (512), dim (128)];
+    _C: tensor of shape [seqlen (512), dim (128)];
 */
 torch::Tensor wmma_base_ours_cuda(
     torch::Tensor _A, 
