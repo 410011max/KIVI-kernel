@@ -213,7 +213,8 @@ size_t initLr() {
 
 
 /*
-Computes GEMM (PyTorch interface).
+Computes low rank kernel (PyTorch interface). 
+Fomula: C @ (A @ B.T).T 
 
 Args:
     _A: tensor of shape [seqlen (512), rank (64)];
